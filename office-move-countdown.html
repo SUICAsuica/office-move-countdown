@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Office Move Countdown</title>
+  <!-- Tailwind via CDN for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React and ReactDOM via CDN -->
+  <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  <!-- Babel for JSX support in the browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-neutral-200">
+  <div id="root"></div>
+  <!-- Our countdown component -->
+  <script type="text/babel">
+    // OfficeMoveCountdown component
+    function OfficeMoveCountdown() {
+      const [remainingDays, setRemainingDays] = React.useState(0);
+      const [targetDateStr, setTargetDateStr] = React.useState("");
+      const [currentDateStr, setCurrentDateStr] = React.useState("");
+
+      // 固定ターゲット日付を計算する関数
+      const getTargetDate = () => {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        let target = new Date(currentYear, 1, 28); // 2月28日（月は0起点）
+        // 今年の2月28日が過ぎていれば翌年に変更
+        if (now > target) {
+          target = new Date(currentYear + 1, 1, 28);
+        }
+        return target;
+      };
+
+      // 日本の祝日リスト（YYYY-MM-DD形式）
+      const holidays = [
+        "2026-02-11", // 建国記念の日
+        "2026-02-23", // 天皇誕生日
+      ];
+
+      React.useEffect(() => {
+        const calculateBusinessDays = () => {
+          const start = new Date();
+          start.setHours(0, 0, 0, 0);
+          const target = getTargetDate();
+          target.setHours(0, 0, 0, 0);
+          // フォーマットされた日付文字列を設定
+          setTargetDateStr(
+            target
+              .toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" })
+              .replace(/\//g, ".")
+          );
+          setCurrentDateStr(
+            start.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric", weekday: "short" })
+          );
+          if (start > target) {
+            setRemainingDays(0);
+            return;
+          }
+          let count = 0;
+          let current = new Date(start);
+          while (current < target) {
+            const dayOfWeek = current.getDay();
+            const year = current.getFullYear();
+            const month = String(current.getMonth() + 1).padStart(2, "0");
+            const day = String(current.getDate()).padStart(2, "0");
+            const dateString = `${year}-${month}-${day}`;
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            const isHoliday = holidays.includes(dateString);
+            if (!isWeekend && !isHoliday) {
+              count++;
+            }
+            current.setDate(current.getDate() + 1);
+          }
+          setRemainingDays(count);
+        };
+        calculateBusinessDays();
+        // 1時間ごとに更新
+        const timer = setInterval(calculateBusinessDays, 1000 * 60 * 60);
+        return () => clearInterval(timer);
+      }, []);
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4 font-sans text-neutral-800">
+          <div className="relative w-full max-w-[340px] perspective-1000">
+            {/* 装飾として重なった紙 */}
+            <div className="absolute top-0 left-0 w-full h-full bg-white rounded-lg shadow-xl translate-x-2 translate-y-2 rotate-1 z-0 border border-neutral-300"></div>
+            <div className="absolute top-0 left-0 w-full h-full bg-white rounded-lg shadow-xl -translate-x-1 -translate-y-1 -rotate-1 z-0 border border-neutral-300"></div>
+            {/* メインカード */}
+            <div className="relative bg-white rounded-lg shadow-2xl overflow-hidden z-10 border border-neutral-200">
+              {/* リング穴風デザイン */}
+              <div className="absolute top-0 left-0 w-full h-16 flex justify-between px-8 z-20">
+                {[...Array(2)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-4 h-12 bg-neutral-200 rounded-b-full shadow-inner border-x border-b border-neutral-300 relative -top-6"
+                  >
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-2 h-2 bg-neutral-800 rounded-full"></div>
+                  </div>
+                ))}
+              </div>
+              {/* ミシン目 */}
+              <div className="w-full border-b-2 border-dashed border-neutral-300 mt-12"></div>
+              {/* 内容エリア */}
+              <div className="p-8 pb-12 text-center flex flex-col items-center">
+                {/* ヘッダー */}
+                <div className="mt-4 mb-2">
+                  <span className="inline-block px-3 py-1 bg-neutral-800 text-white text-xs font-bold tracking-widest uppercase rounded-sm">
+                    Office Move
+                  </span>
+                </div>
+                <h2 className="text-neutral-500 text-sm font-bold tracking-wider mb-6">
+                  オフィス移転まで
+                </h2>
+                {/* メイン数字 */}
+                <div className="relative">
+                  <span className="text-[10rem] leading-none font-black text-neutral-800 tracking-tighter">
+                    {remainingDays}
+                  </span>
+                  <span className="absolute bottom-4 -right-8 text-2xl font-bold text-red-600 transform -rotate-12">
+                    Days
+                  </span>
+                </div>
+                {/* 注釈 */}
+                <div className="mt-4 flex flex-col items-center gap-1">
+                  <p className="text-xs font-bold text-red-500 bg-red-50 px-3 py-1 rounded-full border border-red-100">
+                    ※土日祝を除く稼働日のみ
+                  </p>
+                </div>
+                {/* フッター情報 */}
+                <div className="mt-10 w-full border-t-2 border-neutral-100 pt-6">
+                  <div className="flex justify-between items-end">
+                    <div className="text-left">
+                      <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Target Date</p>
+                      <p className="text-xl font-bold text-neutral-800 tracking-tight">
+                        {targetDateStr}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Today</p>
+                      <p className="text-sm font-bold text-neutral-600">{currentDateStr}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    // Render the component
+    ReactDOM.render(<OfficeMoveCountdown />, document.getElementById('root'));
+  </script>
+</body>
+</html>
